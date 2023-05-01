@@ -103,5 +103,5 @@ def read(token: Union[str, None] = None, mid: Union[str, None] = None):
     }
 
     response = requests.get(
-        'https://web2.temp-mail.org/messages', headers=headers)
+        'https://web2.temp-mail.org/message' + mid, headers=headers)
     return response.json()
