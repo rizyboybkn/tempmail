@@ -13,9 +13,12 @@ data = [list(filter(None, i))[0] for i in re.findall('<td class="hm">(.*?)</td>|
 groupings = [dict(zip(['ip', 'port', 'code', 'using_anonymous'], data[i:i+4])) for i in range(0, len(data), 4)]
 final_groupings = [{'full_ip':"{ip}:{port}".format(**i)} for i in groupings]
 
+
+# proxies = requests.get("https://raw.githubusercontent.com/prxchk/proxy-list/main/http.txt").text.split("\n")
+
 def check_proxy(px):
     try:
-        requests.get("https://www.google.com/", proxies = {"https":  px}, timeout = 2)
+        requests.get("https://www.google.com/", proxies = {"https":  px}, timeout = 3)
     except Exception as x:
         print('--'+px + ' is dead: '+ x.__class__.__name__)
         return False
@@ -31,38 +34,46 @@ app = FastAPI()
 def root():
     return "hi"
 
+def getProxy():
+        proxy = random.choice(groupings)
+        proxy = proxy['ip']  + ":" + proxy['port']
+        while check_proxy(proxy) == False:  
+            proxy = random.choice(groupings)
+            proxy = proxy['ip']  + ":" + proxy['port']
+        return proxy
+
+
+def getMail(proxy = None):
+    try:
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Origin': 'https://temp-mail.org',
+            'Referer': 'https://temp-mail.org/',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-site',
+            # Requests doesn't support trailers
+            # 'Te': 'trailers',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0',
+        }
+        
+        response = requests.post('https://web2.temp-mail.org/mailbox', headers=headers,
+                                timeout=10,
+                                proxies=  { 'http': proxy,'https': proxy} if proxy != None else None)
+        return response.json() 
+    except Exception as x:
+        print(x)
+        return getMail(getProxy())
+
+
+
+
 
 @app.get("/getMail")
 def read_root():
-    # proxy = FreeProxy(country_id=['US', 'BR'], timeout=0.3, rand=True).get()
-    proxy = random.choice(groupings)
-    proxy = proxy['ip']  + ":" + proxy['port']
-    while check_proxy(proxy) == False:  
-          proxy = random.choice(groupings)
-          proxy = proxy['ip']  + ":" + proxy['port']
-    print(proxy)
+    return getMail()
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Origin': 'https://temp-mail.org',
-        'Referer': 'https://temp-mail.org/',
-        'Sec-Fetch-Dest': 'empty',
-        'Sec-Fetch-Mode': 'cors',
-        'Sec-Fetch-Site': 'same-site',
-        # Requests doesn't support trailers
-        # 'Te': 'trailers',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0',
-    }
-
-    response = requests.post('https://web2.temp-mail.org/mailbox', headers=headers,
-                             timeout=10,
-                             proxies={
-                                 'http': proxy,
-                                 'https': proxy,
-                             },)
-
-    return response.json()
 
 
 @app.get("/messages/{token}")
