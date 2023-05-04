@@ -61,11 +61,15 @@ def getMail(proxy = None):
         response = requests.post('https://web2.temp-mail.org/mailbox', headers=headers,
                                 timeout=10,
                                 proxies=  { 'http': proxy,'https': proxy} if proxy != None else None)
+        
+        if("errorMessage" in response.json()):
+            assert ""
+
         return response.json() 
     except Exception as x:
         print(x)
         return getMail(getProxy())
-    
+
 
 
 
